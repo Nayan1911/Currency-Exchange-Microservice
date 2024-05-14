@@ -6,8 +6,16 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  GKE_ZONE: ${{ secrets.GKE_ZONE }}
+  GKE_SA_KEY: ${{ secrets.GKE_SA_KEY }}
+  GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
+  GKE_PROJECT: ${{ secrets.GKE_PROJECT }}
+  GOOGLE_APPLICATION_CREDENTIAL: ${{ secrets.SA_KEY }}
+
+
 jobs:
-  deploy_currency_conversion:
+  Docker_Deploy_conversion:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -16,16 +24,14 @@ jobs:
       - name: Build currency conversion service Docker image
         run: docker build -t sharmanayan/currency-conversion:0.0.1-RELEASE ./01-currency-exchange-microservice-basic
 
-      # - name: Tag currency conversion service Docker image
-      #   run: docker tag currency-conversion-service sharmanayan/currency-conversion:0.0.1-RELEASE
-
       - name: Login to Docker registry
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u sharmanayan --password-stdin
 
       - name: Push currency conversion service Docker image to registry
         run: docker push sharmanayan/currency-conversion:0.0.1-RELEASE
 
-  deploy_exchange:
+  Docker_Deploy_Exchange:
+    needs: Docker_Deploy_conversion
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -34,12 +40,48 @@ jobs:
       - name: Build exchange service Docker image
         run: docker build -t sharmanayan/currency-exchange:0.0.1-RELEASE ./02-currency-conversion-microservice-basic
 
-      # - name: Tag exchange service Docker image
-      #   run: docker tag exchange-service sharmanayan/currency-exchange:0.0.1-RELEASE
-
       - name: Login to Docker registry
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u sharmanayan --password-stdin
 
       - name: Push exchange service Docker image to registry
         run: docker push sharmanayan/currency-exchange:0.0.1-RELEASE
 
+  GKE_deploy:
+    needs: Docker_Deploy_Exchange
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure Google Cloud credentials
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Authenticate gcloud
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.SA_KEY }}
+  
+      - name: Initialize Terraform
+        run: terraform init
+  
+      - name: Debug Credentials
+        run: |
+          echo "GOOGLE_APPLICATION_CREDENTIALS: $GOOGLE_APPLICATION_CREDENTIALS"
+          gcloud auth list
+
+      - name: Configure kubectl
+        run: gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} --zone ${{ env.GKE_ZONE }} --project ${{ env.GKE_PROJECT }}
+  
+      - name: kubectl - Google Cloud GKE cluster.
+        uses: ameydev/gke-kubectl-action@master
+        env:
+          PROJECT_ID: ${{ env.GKE_PROJECT }}
+          APPLICATION_CREDENTIALS: ${{ env.GKE_SA_KEY }}
+          CLUSTER_NAME: ${{ env.GKE_CLUSTER }}
+          ZONE_NAME: ${{ env.GKE_ZONE }}
+        with:
+          args: |
+            kubectl apply -f 01-currency-exchange-microservice-basic/deployment.yaml
+            kubectl apply -f 01-currency-conversion-microservice-basic/deployment.yaml
+            kubectl apply -f 01-currency-conversion-microservice-basic/00-configmap-currency-conversion.yaml
+        
