@@ -82,6 +82,6 @@ jobs:
         with:
           args: |
             kubectl apply -f 01-currency-exchange-microservice-basic/deployment.yaml
-            kubectl apply -f 01-currency-conversion-microservice-basic/deployment.yaml
-            kubectl apply -f 01-currency-conversion-microservice-basic/00-configmap-currency-conversion.yaml
+            kubectl apply -f 02-currency-conversion-microservice-basic/deployment.yaml
+            kubectl apply -f 02-currency-conversion-microservice-basic/00-configmap-currency-conversion.yaml
         
