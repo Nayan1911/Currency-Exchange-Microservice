@@ -16,8 +16,8 @@ jobs:
       - name: Build currency conversion service Docker image
         run: docker build -t sharmanayan/currency-conversion:0.0.1-RELEASE ./01-currency-exchange-microservice-basic
 
-      - name: Tag currency conversion service Docker image
-        run: docker tag currency-conversion-service sharmanayan/currency-conversion:0.0.1-RELEASE
+      # - name: Tag currency conversion service Docker image
+      #   run: docker tag currency-conversion-service sharmanayan/currency-conversion:0.0.1-RELEASE
 
       - name: Login to Docker registry
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u sharmanayan --password-stdin
@@ -34,8 +34,8 @@ jobs:
       - name: Build exchange service Docker image
         run: docker build -t sharmanayan/currency-exchange:0.0.1-RELEASE ./02-currency-conversion-microservice-basic
 
-      - name: Tag exchange service Docker image
-        run: docker tag exchange-service sharmanayan/currency-exchange:0.0.1-RELEASE
+      # - name: Tag exchange service Docker image
+      #   run: docker tag exchange-service sharmanayan/currency-exchange:0.0.1-RELEASE
 
       - name: Login to Docker registry
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u sharmanayan --password-stdin
